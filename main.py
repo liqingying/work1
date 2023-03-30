@@ -1,5 +1,7 @@
+from PyQt5.QtWidgets import QApplication,QMainWindow
 from scapy.all import *
-
+import sniff_ui
+import sys
 
 ifaces_str = ifaces.show(print_result=False)
 ifaces_str = ifaces_str.split('\n')
@@ -13,16 +15,12 @@ filter = None
 iface = ifaces_list[10]
 print(iface)
 
-# def CallBack(packet):
-#     print(packet.show())
-#
-#     if packet.haslayer('TCP'):
-#         print(packet['TCP'].sport)
-#         print(packet['TCP'].dport)
-#         print(packet['TCP'].seq)
-#         print(packet['TCP'].dataofs)
-#
-#
-# filter = "tcp"
-# 1313221
-packet = sniff(filter=filter, iface=iface, count=0)
+# packet = sniff(filter=filter, iface=iface, count=0)
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    mainwindow = QMainWindow()
+    ui = sniff_ui.Ui_MainWindow()
+    ui.setupUi(mainwindow)
+    mainwindow.show()
+    sys.exit(app.exec_())
