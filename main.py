@@ -49,11 +49,11 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         self.comboBox.activated.connect(self.select_dev)
         self.pushButton.clicked.connect(self.start_sniff)
         self.pushButton_2.clicked.connect(self.stop_sniff)
-        self.pushButton_3.clicked.connect(self.sniff_filter)  #########
+        self.pushButton_3.clicked.connect(self.sniff_filter)
         self.pushButton_4.clicked.connect(self.save_data)
         self.pushButton_5.clicked.connect(self.read_data)
         self.pushButton_6.clicked.connect(self.clear_data)
-        self.tableWidget.clicked.connect(self.table_display)  #############
+        self.tableWidget.clicked.connect(self.table_display)
 
     def select_dev(self):
         # 记录当前选择的网卡
@@ -67,7 +67,11 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
 
     def capture(self):
         while self.is_sniff:
-            sniff(filter=self.filter, prn=self.handle_pkt, iface=self.dev, count=1)
+            pkt = sniff(filter=self.filter, prn=self.handle_pkt, iface=self.dev, count=1)
+            # 保存 pkt
+            # self.saved_pkt.append(pkt[0])
+            # # print(pkt)
+            # # print(pkt[0])
 
     def handle_pkt(self, pkt):
         # pkt.show()
@@ -220,11 +224,98 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         if self.is_sniff:
             sniff_start = True
             self.is_sniff = False
-        self.filter = self.lineEdit_2.text()
+        self.recover_table()
+        proto = self.lineEdit_5.text()
+        src_ip = self.lineEdit.text()
+        dst_ip = self.lineEdit_2.text()
+        src_port = self.lineEdit_3.text()
+        dst_port = self.lineEdit_4.text()
+        # self.filter =
+        new_saved_pkt = []
+
+        # print("new: " + str(len(new_saved_pkt)))
+        # print("saved: " + str(len(self.saved_pkt)))
+        #
+        # print(proto + " " + src_ip + " " + dst_ip + " " + src_port + " " + dst_port)
+        number = self.tableWidget.rowCount()
+        for i in range(number):
+            if proto != '':
+                if self.tableWidget.item(i, 4) is None:
+                    continue
+                if self.tableWidget.item(i, 4).text() == "":
+                    continue
+                p = self.tableWidget.item(i, 4).text().strip()
+                # print("protocol:" + p)
+                if p.lower() != proto.lower():
+                    continue
+            if src_ip != '':
+                if self.tableWidget.item(i, 2) is None:
+                    continue
+                if self.tableWidget.item(i, 2).text() == "":
+                    continue
+                s_ip = self.tableWidget.item(i, 2).text().strip()
+                # print("s_ip:" + s_ip)
+                if s_ip != src_ip:
+                    continue
+            if dst_ip != '':
+                if self.tableWidget.item(i, 3) is None:
+                    continue
+                if self.tableWidget.item(i, 3).text() == "":
+                    continue
+                d_ip = self.tableWidget.item(i, 3).text().strip()
+                # print("d_ip:" + d_ip)
+                if d_ip != dst_ip:
+                    continue
+            if src_port != '':
+                pkt = self.saved_pkt[i]
+                s_port = -1
+                if pkt.haslayer("UDP"):
+                    s_port = pkt["UDP"].sport
+                if pkt.haslayer("TCP"):
+                    s_port = pkt["TCP"].sport
+                # print("s_port:" + str(s_port))
+                if str(s_port) != str(src_port):
+                    continue
+            if dst_port != '':
+                pkt = self.saved_pkt[i]
+                d_port = -1
+                if pkt.haslayer("UDP"):
+                    d_port = pkt["UDP"].dport
+                if pkt.haslayer("TCP"):
+                    d_port = pkt["TCP"].dport
+                # print("d_port:" + str(d_port))
+                if str(d_port) != str(dst_port):
+                    continue
+            new_saved_pkt.append(self.saved_pkt[i])
+        # self.clear_data()
+        number = self.tableWidget.rowCount()
+        for i in range(number - 1, -1, -1):
+            self.tableWidget.removeRow(i)
+        self.textEdit.clear()
+        self.textEdit_2.clear()
+        ll = len(self.saved_pkt)  # 保留原本的长度，在handle时会改变saved_pkt的长度
+        # print("new: " + str(len(new_saved_pkt)))
+        # print("saved: " + str(len(self.saved_pkt)))
+        for i in range(len(new_saved_pkt)):
+            self.handle_pkt(new_saved_pkt[i])
+        # print("new: " + str(len(new_saved_pkt)))
+        # print("saved: " + str(len(self.saved_pkt)))
+        self.saved_pkt = self.saved_pkt[0:ll]
+        # print("new: " + str(len(new_saved_pkt)))
+        # print("saved: " + str(len(self.saved_pkt)))
         if sniff_start:
             self.is_sniff = True
-        # for i in range(len(pkts)):
-        #     self.handle_pkt(pkts[i])
+
+    def recover_table(self):
+        number = self.tableWidget.rowCount()
+        for i in range(number - 1, -1, -1):
+            self.tableWidget.removeRow(i)
+        self.textEdit.clear()
+        self.textEdit_2.clear()
+        ll = len(self.saved_pkt)  # 保留原本的长度，在handle时会改变saved_pkt的长度
+        for i in range(len(self.saved_pkt)):
+            self.handle_pkt(self.saved_pkt[i])
+        self.saved_pkt = self.saved_pkt[0:ll]
 
     def save_data(self):
         file, file_type = QFileDialog.getSaveFileName(self, caption="选择保存路径", filter="*.pcap")
@@ -264,12 +355,18 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         tmp = "Frame number %d: \n interface: %s" % (number + 1, self.dev)
         self.textEdit.setText(tmp)
         if hasattr(pkt, "len"):
-            self.textEdit.append(" length: %d bytes" % pkt.len)
+            self.textEdit.append(" length: %d bytes" % len(pkt))
         self.textEdit.append(str(pkt))
         if pkt.haslayer("Ether"):
             self.textEdit.append(str(pkt["Ether"].layers))
 
-        self.textEdit_2.setText(str(bytes_hex(pkt)))
+        # self.textEdit_2.setText(str(bytes_hex(pkt)))
+        # hex_bytes = binascii.hexlify(pkt)
+        # print(bytes(pkt))
+        # print(bytes_hex(pkt))
+        hex_data = ' '.join([f'{x:02X}' for x in bytes(pkt)])
+        lines = [hex_data[i:i + 48] for i in range(0, len(hex_data), 48)]
+        self.textEdit_2.setPlainText('\n'.join(lines))
 
 
 if __name__ == '__main__':
