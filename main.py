@@ -88,8 +88,8 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         capture_time = "%.6f" % (pkt.time - self.start_time)
         # print(type(capture_time))
         self.tableWidget.setItem(number, 1, QTableWidgetItem(str(capture_time)))  # Time
-
-        print(pkt)
+        # print(str(number + 1))
+        # print(pkt)
 
         # print(str(type(len(pkt))) + str(len(pkt)))
         if pkt.haslayer("Loopback"):
@@ -98,9 +98,9 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
             self.tableWidget.setItem(number, 4, QTableWidgetItem("None"))  # Protocol
             self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
             self.tableWidget.setItem(number, 6, QTableWidgetItem("Loopback"))  # Info
+            return
         if pkt.haslayer("Ether"):
-            print(pkt["Ether"].layers)
-            # print(dir(pkt["Ether"]))
+            # print(pkt["Ether"].layers)
             if pkt.haslayer("ARP"):
                 self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["Ether"].src))  # Source
                 self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["Ether"].dst))  # Destination
@@ -109,13 +109,18 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 if pkt["ARP"].psrc == pkt["ARP"].pdst:
                     self.tableWidget.setItem(number, 6, QTableWidgetItem("ARP Announcement for " +
                                                                          str(pkt["ARP"].pdst)))  # Info
+                    return
                 else:
                     self.tableWidget.setItem(number, 6, QTableWidgetItem("Who has " + str(pkt["ARP"].pdst) +
                                                                          "? Tell " + str(pkt["ARP"].psrc)))  # Info
+                    return
             if pkt.haslayer("IP"):
                 self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["IP"].src))  # Source
                 self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["IP"].dst))  # Destination
                 self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
+                if pkt["IP"].proto == 2:
+                    self.tableWidget.setItem(number, 4, QTableWidgetItem("IGMP"))
+                    return
                 if pkt.haslayer("UDP"):
                     if pkt["UDP"].dport == 1900:
                         # print("enter")
@@ -124,132 +129,78 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                         self.tableWidget.setItem(number, 6,
                                                  QTableWidgetItem(
                                                      pkt["Raw"].load.decode('utf-8').split('\r', 1)[0]))  # Info
-                    elif pkt.haslayer("DNS"):
-
-                        if pkt["IP"].dst == "224.0.0.251" and pkt["UDP"].dport == 5353:
+                        return
+                    if pkt.haslayer("DNS"):
+                        if pkt["IP"].dst == "224.0.0.251" and pkt["UDP"].dport == 5353 and pkt["UDP"].sport == 5353:
                             self.tableWidget.setItem(number, 4, QTableWidgetItem("MDNS"))  # Protocol
                             # self.tableWidget.setItem(number, 6, QTableWidgetItem()
-                    else:
-                        self.tableWidget.setItem(number, 4, QTableWidgetItem("UDP"))  # Protocol
-                        self.tableWidget.setItem(number, 6, QTableWidgetItem(str(pkt["UDP"].sport) + "->" +
-                                                                             str(pkt["UDP"].dport) + " Len=" +
-                                                                             str(pkt["UDP"].len - 8)))  # Info
+                            return
+                        self.tableWidget.setItem(number, 4, QTableWidgetItem("DNS"))  # Protocol
+                        # self.tableWidget.setItem(number, 6, QTableWidgetItem()
+                        return
+                    self.tableWidget.setItem(number, 4, QTableWidgetItem("UDP"))  # Protocol
+                    self.tableWidget.setItem(number, 6, QTableWidgetItem(str(pkt["UDP"].sport) + "->" +
+                                                                         str(pkt["UDP"].dport) + " Len=" +
+                                                                         str(pkt["UDP"].len - 8)))  # Info
+                    return
+                if pkt.haslayer("TCP"):
+                    self.tableWidget.setItem(number, 4, QTableWidgetItem("TCP"))  # Protocol
+                    self.tableWidget.setItem(number, 6, QTableWidgetItem(str(pkt["TCP"].sport) + "->" +
+                                                                         str(pkt["TCP"].dport)))
+                    return
             if pkt.haslayer("IPv6"):
                 self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["IPv6"].src))  # Source
                 self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["IPv6"].dst))  # Destination
                 self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
-                if pkt.haslayer("ICMPv6ND_NS") and pkt.haslayer("ICMPv6NDOptSrcLLAddr"):
+                if pkt["IPv6"].nh == 58 or pkt["IPv6"].nh == 0 and pkt["IPv6ExtHdrHopByHop"].nh == 58:
                     self.tableWidget.setItem(number, 4, QTableWidgetItem("ICMPv6"))  # Protocol
-                    a = pkt["ICMPv6ND_NS"].tgt
-                    b = pkt["ICMPv6NDOptSrcLLAddr"].lladdr
-                    # print("enter")
-                    # print(pkt["ICMPv6ND_NS"].type)
-                    if pkt["ICMPv6ND_NS"].type == 135:  # ICMPv6ND_NS type=Neighbor Solicitation = 135
-                        self.tableWidget.setItem(number, 6, QTableWidgetItem("Neighbor Solicitation for " +
-                                                                             str(a) + " from " + str(b)))
+                    if pkt.haslayer("ICMPv6ND_NS") and pkt.haslayer("ICMPv6NDOptSrcLLAddr"):
+                        a = pkt["ICMPv6ND_NS"].tgt
+                        b = pkt["ICMPv6NDOptSrcLLAddr"].lladdr
+                        # print("enter")
+                        # print(pkt["ICMPv6ND_NS"].type)
+                        if pkt["ICMPv6ND_NS"].type == 135:  # ICMPv6ND_NS type=Neighbor Solicitation = 135
+                            self.tableWidget.setItem(number, 6, QTableWidgetItem("Neighbor Solicitation for " +
+                                                                                 str(a) + " from " + str(b)))
+                            return
+                    if pkt.haslayer("ICMPv6MLReport"):
+                        self.tableWidget.setItem(number, 6, QTableWidgetItem("Multicast Report"))
+                        return
                 if pkt.haslayer("UDP"):
-                    # DHCPv6
-                    if pkt.haslayer("DHCP6_Request"):
+                    if pkt.haslayer("DNS"):
+                        if pkt["IPv6"].dst == "ff02::fb" and pkt["UDP"].dport == 5353 and pkt["UDP"].sport == 5353:
+                            self.tableWidget.setItem(number, 4, QTableWidgetItem("MDNS"))  # Protocol
+                            # self.tableWidget.setItem(number, 6, QTableWidgetItem()
+                            return
+                        self.tableWidget.setItem(number, 4, QTableWidgetItem("DNS"))
+                    if pkt["UDP"].sport == 546 and pkt["UDP"].dport == 547:
                         self.tableWidget.setItem(number, 4, QTableWidgetItem("DHCPv6"))  # Protocol
+                        if pkt.haslayer("DHCP6_Request"):
+                            self.tableWidget.setItem(number, 6, QTableWidgetItem("REQUEST"))
+                            return
+                        if pkt.haslayer("DHCP6_Solicit"):
+                            self.tableWidget.setItem(number, 6, QTableWidgetItem("SOLICIT"))
+                            return
+                    if pkt["UDP"].dport == 5355:
+                        self.tableWidget.setItem(number, 4, QTableWidgetItem("LLMNR"))
                         # self.tableWidget.setItem(number, 6, QTableWidgetItem()
-
-        # 解析以太网数据包
-        # dpkt.Packet(bytes_hex(pkt))
-        # # packet = dpkt.Packet(pkt)
-        # #
-        # # 获取以太网头信息
-        # eth_header = packet.ethernet
-        #
-        # # 获取以太网头的源MAC地址
-        # src_mac = ':'.join('%02x' % b for b in eth_header.src)
-        # print(f'Source MAC Address: {src_mac}')
-        # self.tableWidget.setItem(number, 2, QTableWidgetItem(src_mac))
-
-        # 解析以太网帧
-
-        # try:
-        #     eth = dpkt.ethernet.Ethernet(pkt)
-        #     ip = eth.data
-        #     src = socket.inet_ntoa(ip.src)
-        #     dst = socket.inet_ntoa(ip.dst)
-        #     tcp = ip.data
-        #     http = dpkt.http.Request(tcp.data)
-        #     if (http.method == "GET"):
-        #         uri = http.uri.lower()
-        #         if WordKey in uri:
-        #             print("[+] 源地址: {} --> 目标地址: {} 检索到URL中存在 {}".format(src, dst, uri))
-        # except Exception:
-        #     pass
-
-        # try:
-        #     eth = dpkt.ethernet.Ethernet(pkt)
-        #     if isinstance(eth.data, dpkt.ip.IP):
-        #         ip = eth.data
-        #         src_ip = ".".join(str(ord(x)) for x in ip.src)
-        #         dst_ip = ".".join(str(ord(x)) for x in ip.dst)
-        #         protocol = ip.data.__class__.__name__
-        #         self.tableWidget.setItem(number, 2, QTableWidgetItem(src_ip))
-        #         self.tableWidget.setItem(number, 3, QTableWidgetItem(dst_ip))
-        #         self.tableWidget.setItem(number, 4, QTableWidgetItem(protocol))
-        # except Exception:
-        #     pass
-
-        # if "IP" in pkt:
-        #     src_ip = pkt["IP"].src
-        #     dst_ip = pkt["IP"].dst
-        #     protocol = pkt["IP"].proto
-        #     print("IP:" + str(type(src_ip)) + str(src_ip) + str(type(protocol)) + str(protocol))
-        #     self.tableWidget.setItem(number, 2, QTableWidgetItem(str(src_ip)))
-        #     self.tableWidget.setItem(number, 3, QTableWidgetItem(str(dst_ip)))
-        #     self.tableWidget.setItem(number, 4, QTableWidgetItem(str(protocol)))
-        # elif "TCP" in pkt:
-        #     src_port = pkt["TCP"].sport
-        #     dst_port = pkt["TCP"].dport
-        #     protocol = "TCP"
-        #     print("TCP:" + str(type(src_port)) + str(src_port) + str(type(protocol)) + str(protocol))
-        #     self.tableWidget.setItem(number, 2, QTableWidgetItem(str(src_port)))
-        #     self.tableWidget.setItem(number, 3, QTableWidgetItem(str(dst_port)))
-        #     self.tableWidget.setItem(number, 4, QTableWidgetItem(str(protocol)))
-        # elif "UDP" in pkt:
-        #     src_port = pkt["UDP"].sport
-        #     dst_port = pkt["UDP"].dport
-        #     protocol = "UDP"
-        #     print("UDP:" + str(type(src_port)) + str(src_port) + str(type(protocol)) + str(protocol))
-        #     self.tableWidget.setItem(number, 2, QTableWidgetItem(str(src_port)))
-        #     self.tableWidget.setItem(number, 3, QTableWidgetItem(str(dst_port)))
-        #     self.tableWidget.setItem(number, 4, QTableWidgetItem(str(protocol)))
-
-        # else:
-        #     # Source
-        #     tmp_item = QTableWidgetItem(pkt.src)
-        #     self.tableWidget.setItem(number, 2, tmp_item)
-        #     # Destination
-        #     tmp_item = QTableWidgetItem(pkt.dst)
-        #     self.tableWidget.setItem(number, 3, tmp_item)
-        #     # Protocol
-        #     # if pkt.haslayer("MDNS"):
-        #     #     tmp_item = QTableWidgetItem("MDNS")
-        #     #     self.tableWidget.setItem(number, 4, tmp_item)
-        #     if hasattr(pkt, "proto"):
-        #         # print(table[pkt.proto])
-        #         # print(type(table[pkt.proto]))
-        #         if pkt.proto in self.table:
-        #             tmp_item = QTableWidgetItem(str(self.table[pkt.proto]))
-        #             self.tableWidget.setItem(number, 4, tmp_item)
-
-        # Length
-        # if hasattr(pkt, "len"):
-        #     # print(pkt.len)
-        #     # print(type(pkt.len))
-        #     tmp_item = QTableWidgetItem(str(pkt.len))
-        #     self.tableWidget.setItem(number, 5, tmp_item)
-
-        # info
-        # if hasattr(pkt, "sport"):
-        #     # print("################123123")
-        #     if hasattr(pkt, "dport"):
-        #         tmp_item = QTableWidgetItem(str(pkt.sport) + "->" + str(pkt.dport))
-        #         self.tableWidget.setItem(number, 6, tmp_item)
+                        return
+                    self.tableWidget.setItem(number, 4, QTableWidgetItem("UDP"))
+                    self.tableWidget.setItem(number, 6, QTableWidgetItem(str(pkt["UDP"].sport) + "->" +
+                                                                         str(pkt["UDP"].dport) + " Len=" +
+                                                                         str(pkt["UDP"].len - 8)))  # Info
+                    return
+                if pkt["IPv6"].nh == 89:
+                    self.tableWidget.setItem(number, 4, QTableWidgetItem("OSPF"))  # Protocol
+                    # self.tableWidget.setItem(number, 6, QTableWidgetItem(""))
+                    return
+            self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["Ether"].src))  # Source
+            self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["Ether"].dst))  # Destination
+            self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
+            if pkt["Ether"].type == 0x893a:
+                self.tableWidget.setItem(number, 4, QTableWidgetItem("ieee1905"))  # Protocol
+                # self.tableWidget.setItem(number, 6, QTableWidgetItem(""))
+                return
 
     def stop_sniff(self):
         self.is_sniff = False
@@ -265,20 +216,13 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
             qcloseevent.ignore()
 
     def sniff_filter(self):
+        sniff_start = False
+        if self.is_sniff:
+            sniff_start = True
+            self.is_sniff = False
         self.filter = self.lineEdit_2.text()
-        # print(self.saved_pkt)
-
-        # pkts = sniff(offline=self.saved_pkt, filter=self.filter)
-        # print(pkts)
-        # self.clear_data()
-        # for i in range(len(pkts)):
-        #     self.handle_pkt(pkts[i])
-
-        # file = "tmp_saved_filter_data.pcap"
-        # wrpcap(file, self.saved_pkt)
-        # self.clear_data()
-        # pkts = rdpcap(file)
-        # os.remove(file)
+        if sniff_start:
+            self.is_sniff = True
         # for i in range(len(pkts)):
         #     self.handle_pkt(pkts[i])
 
@@ -316,30 +260,16 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         self.textEdit_2.clear()
         number = index.row()
         pkt = self.saved_pkt[number]
-        # print(pkt)
-        # print(type(pkt))
-
-        # if hasattr(pkt, "load"):
-        #     hex_data = binascii.hexlify(pkt.load)
-        #     # print(hex_data)
-        #     # print(type(hex_data))
-        #     self.textEdit_2.setText("load: " + str(pkt.load) + "\n\n\n" + "十六进制" + str(hex_data))
 
         tmp = "Frame number %d: \n interface: %s" % (number + 1, self.dev)
         self.textEdit.setText(tmp)
         if hasattr(pkt, "len"):
             self.textEdit.append(" length: %d bytes" % pkt.len)
+        self.textEdit.append(str(pkt))
+        if pkt.haslayer("Ether"):
+            self.textEdit.append(str(pkt["Ether"].layers))
 
-        # print(str(type(bytes_hex(pkt))))
         self.textEdit_2.setText(str(bytes_hex(pkt)))
-
-        # if packet.haslayer(Raw):
-        #     a = 3
-        # if hasattr(pkt, "raw"):
-        #     data = str(packet.raw)
-        #     print(data)
-        #     print(type(data))
-        #     self.textEdit_2.append("#################################" + str(data))
 
 
 if __name__ == '__main__':

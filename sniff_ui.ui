@@ -19,73 +19,107 @@
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
        <layout class="QGridLayout" name="gridLayout_2">
-        <item row="2" column="7">
-         <widget class="QPushButton" name="pushButton_4">
+        <item row="3" column="5">
+         <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>保存为pcap</string>
+           <string>目的ip</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="6">
-         <widget class="QPushButton" name="pushButton">
-          <property name="text">
-           <string>开始抓包</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="3">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>选择网卡</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="4">
-         <widget class="QLineEdit" name="lineEdit_2"/>
-        </item>
-        <item row="0" column="7">
+        <item row="0" column="12">
          <widget class="QPushButton" name="pushButton_2">
           <property name="text">
            <string>停止抓包</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="4">
-         <widget class="QComboBox" name="comboBox"/>
-        </item>
-        <item row="2" column="3">
-         <widget class="QLabel" name="label_2">
-          <property name="layoutDirection">
-           <enum>Qt::LeftToRight</enum>
-          </property>
+        <item row="3" column="7">
+         <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>筛选条件</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
+           <string>源port</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="6">
+        <item row="0" column="11">
+         <widget class="QPushButton" name="pushButton">
+          <property name="text">
+           <string>开始抓包</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="12">
+         <widget class="QPushButton" name="pushButton_4">
+          <property name="text">
+           <string>保存为pcap</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="13">
+         <widget class="QPushButton" name="pushButton_6">
+          <property name="text">
+           <string>清空当前页面</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="4">
+         <widget class="QLineEdit" name="lineEdit"/>
+        </item>
+        <item row="3" column="6">
+         <widget class="QLineEdit" name="lineEdit_2"/>
+        </item>
+        <item row="3" column="9">
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>目的port</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="11">
          <widget class="QPushButton" name="pushButton_3">
           <property name="text">
-           <string>开启筛选</string>
+           <string>设置筛选词</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="8">
+        <item row="3" column="3">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>源ip</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="13">
          <widget class="QPushButton" name="pushButton_5">
           <property name="text">
            <string>读取pcap</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="8">
-         <widget class="QPushButton" name="pushButton_6">
+        <item row="3" column="8">
+         <widget class="QLineEdit" name="lineEdit_3"/>
+        </item>
+        <item row="3" column="10">
+         <widget class="QLineEdit" name="lineEdit_4"/>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_6">
           <property name="text">
-           <string>清空当前页面</string>
+           <string>协议名字</string>
           </property>
          </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="lineEdit_5"/>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>选择网卡</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" colspan="10">
+         <widget class="QComboBox" name="comboBox"/>
         </item>
        </layout>
       </item>

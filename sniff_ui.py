@@ -98,7 +98,7 @@ class Ui_MainWindow(object):
         self.label.setText(_translate("MainWindow", "选择网卡"))
         self.pushButton_2.setText(_translate("MainWindow", "停止抓包"))
         self.label_2.setText(_translate("MainWindow", "筛选条件"))
-        self.pushButton_3.setText(_translate("MainWindow", "开启筛选"))
+        self.pushButton_3.setText(_translate("MainWindow", "设置筛选词"))
         self.pushButton_5.setText(_translate("MainWindow", "读取pcap"))
         self.pushButton_6.setText(_translate("MainWindow", "清空当前页面"))
         item = self.tableWidget.horizontalHeaderItem(0)
