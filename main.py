@@ -67,11 +67,11 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
             self.start_time = pkt.time
         capture_time = "%.6f" % (pkt.time - self.start_time)
         self.tableWidget.setItem(number, 1, QTableWidgetItem(str(capture_time)))  # Time
+        self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
         if pkt.haslayer("Loopback"):
             self.tableWidget.setItem(number, 2, QTableWidgetItem("127.0.0.1"))  # Source
             self.tableWidget.setItem(number, 3, QTableWidgetItem("127.0.0.1"))  # Destination
             self.tableWidget.setItem(number, 4, QTableWidgetItem("None"))  # Protocol
-            self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
             self.tableWidget.setItem(number, 6, QTableWidgetItem("Loopback"))  # Info
             return
         if pkt.haslayer("Ether"):
@@ -79,7 +79,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["Ether"].src))  # Source
                 self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["Ether"].dst))  # Destination
                 self.tableWidget.setItem(number, 4, QTableWidgetItem("ARP"))  # Protocol
-                self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
                 if pkt["ARP"].psrc == pkt["ARP"].pdst:
                     self.tableWidget.setItem(number, 6, QTableWidgetItem("ARP Announcement for " +
                                                                          str(pkt["ARP"].pdst)))  # Info
@@ -91,7 +90,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
             if pkt.haslayer("IP"):
                 self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["IP"].src))  # Source
                 self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["IP"].dst))  # Destination
-                self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
                 if pkt["IP"].proto == 2:
                     self.tableWidget.setItem(number, 4, QTableWidgetItem("IGMP"))
                     return
@@ -123,7 +121,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
             if pkt.haslayer("IPv6"):
                 self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["IPv6"].src))  # Source
                 self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["IPv6"].dst))  # Destination
-                self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
                 if pkt["IPv6"].nh == 58 or pkt["IPv6"].nh == 0 and pkt["IPv6ExtHdrHopByHop"].nh == 58:
                     self.tableWidget.setItem(number, 4, QTableWidgetItem("ICMPv6"))  # Protocol
                     b = ''
@@ -172,12 +169,15 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                     return
             self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["Ether"].src))  # Source
             self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["Ether"].dst))  # Destination
-            self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
             if pkt["Ether"].type == 0x893a:
                 self.tableWidget.setItem(number, 4, QTableWidgetItem("ieee1905"))  # Protocol
                 # self.tableWidget.setItem(number, 6, QTableWidgetItem(""))
                 return
-            self.tableWidget.setItem(number, 4, QTableWidgetItem("Ether"))
+            self.tableWidget.setItem(number, 4, QTableWidgetItem("Ethernet"))
+        if pkt.haslayer("Dot3"):
+            self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["Dot3"].src))  # Source
+            self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["Dot3"].dst))  # Destination
+            self.tableWidget.setItem(number, 4, QTableWidgetItem("Ethernet"))
 
     def stop_sniff(self):
         self.is_sniff = False
@@ -322,7 +322,10 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         self.textEdit.setText(tmp)
         self.textEdit.append("包长度: %d bytes" % len(pkt))
         self.textEdit.append("包的层次： " + str(pkt))
-        # self.textEdit.append(str(pkt["Ether"].layers))
+        # self.textEdit.append(str(pkt.layers))
+        # self.textEdit.append(str(dir(pkt)))
+        # self.textEdit.append(str(pkt.firstlayer()))
+        # self.textEdit.append(str(type(pkt.firstlayer())))
         if pkt.haslayer("Ether"):
             self.textEdit.append("包的具体内容:")
             output = StringIO()
