@@ -97,6 +97,9 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 if pkt["IP"].proto == 2:
                     self.tableWidget.setItem(number, 4, QTableWidgetItem("IGMP"))
                     return
+                if pkt.haslayer("ICMP"):
+                    self.tableWidget.setItem(number, 4, QTableWidgetItem("ICMP"))
+                    return
                 if pkt.haslayer("UDP"):
                     if pkt["UDP"].dport == 1900:
                         self.tableWidget.setItem(number, 4, QTableWidgetItem("SSDP"))  # Protocol
