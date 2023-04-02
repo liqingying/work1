@@ -230,7 +230,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
             f.append("dst port " + str(dst_port.strip()))
         f = " and ".join(f)
         self.filter = str(f)
-        print(self.filter)
+        # print(self.filter)
         # 对当前抓到的包的筛选
         self.display_pkt = []
         old_order = []
