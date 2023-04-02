@@ -118,6 +118,9 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                                                                          str(pkt["UDP"].len - 8)))  # Info
                     return
                 if pkt.haslayer("TCP"):
+                    if pkt.haslayer("HTTPRequest") or pkt.haslayer("HTTPResponse"):
+                        self.tableWidget.setItem(number, 4, QTableWidgetItem("HTTP"))  # Protocol
+                        return
                     self.tableWidget.setItem(number, 4, QTableWidgetItem("TCP"))  # Protocol
                     self.tableWidget.setItem(number, 6, QTableWidgetItem(str(pkt["TCP"].sport) + "->" +
                                                                          str(pkt["TCP"].dport)))
@@ -177,11 +180,11 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 self.tableWidget.setItem(number, 4, QTableWidgetItem("ieee1905"))  # Protocol
                 # self.tableWidget.setItem(number, 6, QTableWidgetItem(""))
                 return
-            self.tableWidget.setItem(number, 4, QTableWidgetItem("Ethernet"))
+            self.tableWidget.setItem(number, 4, QTableWidgetItem("Eth"))
         if pkt.haslayer("Dot3"):
             self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["Dot3"].src))  # Source
             self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["Dot3"].dst))  # Destination
-            self.tableWidget.setItem(number, 4, QTableWidgetItem("Ethernet"))
+            self.tableWidget.setItem(number, 4, QTableWidgetItem("Eth"))
 
     def stop_sniff(self):
         self.is_sniff = False
@@ -200,18 +203,40 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         sniff_start = False
         if self.is_sniff:
             sniff_start = True
-            self.is_sniff = False
+            self.is_sniff = False  # 如果当前正在抓包，筛选前先停止抓包，筛选操作完成后再重新开启
         self.recover_table()
         proto = self.lineEdit_5.text()
         src_ip = self.lineEdit.text()
         dst_ip = self.lineEdit_2.text()
         src_port = self.lineEdit_3.text()
         dst_port = self.lineEdit_4.text()
+        proto_flag = False if len(proto.strip()) == 0 else True
+        src_ip_flag = False if len(src_ip.strip()) == 0 else True
+        dst_ip_flag = False if len(dst_ip.strip()) == 0 else True
+        src_port_flag = False if len(src_port.strip()) == 0 else True
+        dst_port_flag = False if len(dst_port.strip()) == 0 else True
+
+        #  设置之后要抓的包的filter
+        f = []
+        if proto_flag:
+            f.append(str(proto.strip().lower()))
+        if src_ip_flag:
+            f.append("src host " + str(src_ip.strip()))
+        if dst_ip_flag:
+            f.append("dst host " + str(src_ip.strip()))
+        if src_port_flag:
+            f.append("src port " + str(src_port.strip()))
+        if dst_port_flag:
+            f.append("dst port " + str(dst_port.strip()))
+        f = " and ".join(f)
+        self.filter = str(f)
+        print(self.filter)
+        # 对当前抓到的包的筛选
         self.display_pkt = []
         old_order = []
         number = self.tableWidget.rowCount()
         for i in range(number):
-            if proto != '':
+            if proto_flag:
                 if self.tableWidget.item(i, 4) is None:
                     continue
                 if self.tableWidget.item(i, 4).text() == "":
@@ -219,7 +244,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 p = self.tableWidget.item(i, 4).text().strip()
                 if p.lower() != proto.lower():
                     continue
-            if src_ip != '':
+            if src_ip_flag:
                 if self.tableWidget.item(i, 2) is None:
                     continue
                 if self.tableWidget.item(i, 2).text() == "":
@@ -227,7 +252,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 s_ip = self.tableWidget.item(i, 2).text().strip()
                 if s_ip != src_ip:
                     continue
-            if dst_ip != '':
+            if dst_ip_flag:
                 if self.tableWidget.item(i, 3) is None:
                     continue
                 if self.tableWidget.item(i, 3).text() == "":
@@ -235,7 +260,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 d_ip = self.tableWidget.item(i, 3).text().strip()
                 if d_ip != dst_ip:
                     continue
-            if src_port != '':
+            if src_port_flag:
                 pkt = self.saved_pkt[i]
                 s_port = -1
                 if pkt.haslayer("UDP"):
@@ -244,7 +269,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                     s_port = pkt["TCP"].sport
                 if str(s_port) != str(src_port):
                     continue
-            if dst_port != '':
+            if dst_port_flag:
                 pkt = self.saved_pkt[i]
                 d_port = -1
                 if pkt.haslayer("UDP"):
