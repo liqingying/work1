@@ -56,13 +56,17 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         while self.is_sniff:
             pkt = sniff(filter=self.filter, prn=self.handle_pkt, iface=self.dev, count=1)
 
-    def handle_pkt(self, pkt):
+    def handle_pkt(self, pkt, no_need_add_data_flag=False, old_order=-1):
         # 保存 pkt
-        self.saved_pkt.append(pkt)
-        self.display_pkt.append(pkt)
+        if not no_need_add_data_flag:
+            self.saved_pkt.append(pkt)
+            self.display_pkt.append(pkt)
         number = self.tableWidget.rowCount()
         self.tableWidget.insertRow(number)
-        self.tableWidget.setItem(number, 0, QTableWidgetItem(str(number + 1)))  # No.
+        if no_need_add_data_flag:
+            self.tableWidget.setItem(number, 0, QTableWidgetItem(str(old_order)))  # No.
+        else:
+            self.tableWidget.setItem(number, 0, QTableWidgetItem(str(number + 1)))  # No.
         if number == 0:
             self.start_time = pkt.time
         capture_time = "%.6f" % (pkt.time - self.start_time)
@@ -203,9 +207,8 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         dst_ip = self.lineEdit_2.text()
         src_port = self.lineEdit_3.text()
         dst_port = self.lineEdit_4.text()
-        # self.filter =
         self.display_pkt = []
-
+        old_order = []
         number = self.tableWidget.rowCount()
         for i in range(number):
             if proto != '':
@@ -214,7 +217,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 if self.tableWidget.item(i, 4).text() == "":
                     continue
                 p = self.tableWidget.item(i, 4).text().strip()
-                # print("protocol:" + p)
                 if p.lower() != proto.lower():
                     continue
             if src_ip != '':
@@ -223,7 +225,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 if self.tableWidget.item(i, 2).text() == "":
                     continue
                 s_ip = self.tableWidget.item(i, 2).text().strip()
-                # print("s_ip:" + s_ip)
                 if s_ip != src_ip:
                     continue
             if dst_ip != '':
@@ -232,7 +233,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 if self.tableWidget.item(i, 3).text() == "":
                     continue
                 d_ip = self.tableWidget.item(i, 3).text().strip()
-                # print("d_ip:" + d_ip)
                 if d_ip != dst_ip:
                     continue
             if src_port != '':
@@ -242,7 +242,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                     s_port = pkt["UDP"].sport
                 if pkt.haslayer("TCP"):
                     s_port = pkt["TCP"].sport
-                # print("s_port:" + str(s_port))
                 if str(s_port) != str(src_port):
                     continue
             if dst_port != '':
@@ -252,22 +251,18 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                     d_port = pkt["UDP"].dport
                 if pkt.haslayer("TCP"):
                     d_port = pkt["TCP"].dport
-                # print("d_port:" + str(d_port))
                 if str(d_port) != str(dst_port):
                     continue
             self.display_pkt.append(self.saved_pkt[i])
+            old_order.append(i + 1)
         # self.clear_data()
         number = self.tableWidget.rowCount()
         for i in range(number - 1, -1, -1):
             self.tableWidget.removeRow(i)
         self.textEdit.clear()
         self.textEdit_2.clear()
-        ll = len(self.saved_pkt)  # 保留原本的长度，在handle时会改变saved_pkt的长度
-        lll = len(self.display_pkt)
         for i in range(len(self.display_pkt)):
-            self.handle_pkt(self.display_pkt[i])
-        self.saved_pkt = self.saved_pkt[0:ll]
-        self.display_pkt = self.display_pkt[0:lll]
+            self.handle_pkt(self.display_pkt[i], no_need_add_data_flag=True, old_order=old_order[i])
         if sniff_start:
             self.is_sniff = True
 
@@ -277,12 +272,8 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
             self.tableWidget.removeRow(i)
         self.textEdit.clear()
         self.textEdit_2.clear()
-        ll = len(self.saved_pkt)  # 保留原本的长度，在handle时会改变saved_pkt的长度
-        lll = len(self.display_pkt)
         for i in range(len(self.saved_pkt)):
-            self.handle_pkt(self.saved_pkt[i])
-        self.saved_pkt = self.saved_pkt[0:ll]
-        self.display_pkt = self.display_pkt[0:lll]
+            self.handle_pkt(self.saved_pkt[i], no_need_add_data_flag=True)
 
     def save_data(self):
         file, file_type = QFileDialog.getSaveFileName(self, caption="选择保存路径", filter="*.pcap")
