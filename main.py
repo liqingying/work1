@@ -312,7 +312,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         QMessageBox.information(self, "消息", "文件已保存")
 
     def read_data(self):
-        file, file_type = QFileDialog.getOpenFileName(self, caption="选择保存路径", filter="*.pcap")
+        file, file_type = QFileDialog.getOpenFileName(self, caption="选择读取路径", filter="*.pcap")
         if file == '':
             QMessageBox.warning(self, "注意", "文件内容不能为空")
             return
@@ -341,10 +341,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         self.textEdit.setText(tmp)
         self.textEdit.append("包长度: %d bytes" % len(pkt))
         self.textEdit.append("包的层次： " + str(pkt))
-        # self.textEdit.append(str(pkt.layers))
-        # self.textEdit.append(str(dir(pkt)))
-        # self.textEdit.append(str(pkt.firstlayer()))
-        # self.textEdit.append(str(type(pkt.firstlayer())))
         if pkt.haslayer("Ether"):
             self.textEdit.append("包的具体内容:")
             output = StringIO()
