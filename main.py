@@ -1,10 +1,8 @@
+from io import StringIO
 from PyQt5.QtWidgets import *
 from scapy.all import *
 from sniff_ui import Ui_MainWindow
 import sys
-import socket
-import binascii
-import dpkt
 
 
 class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
@@ -18,20 +16,9 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         self.filter = ""  # 记录筛选条件
         self.start_time = None  # 记录开始抓包的时候的时间戳
         self.saved_pkt = []  # 要保存的pkt
+        self.display_pkt = []  # 要展示的pkt
         # 设置信号处理函数
         self.setui_sign()
-
-        # 生成协议号和协议名称的字典
-        # prefix = "IPPROTO_"
-        # self.table = {num: name[len(prefix):]
-        #               for name, num in vars(socket).items()
-        #               if name.startswith(prefix)}
-
-        # pkt1 = sniff(filter=self.filter, prn=self.handle_pkt, iface=self.dev, count=10)
-        # pkt2 = sniff(filter=self.filter, prn=self.handle_pkt, iface=self.dev, count=1)
-        # pkts = pkt1 + pkt2
-        # print(pkts)
-        # print(self.table)
 
     def setui_init(self):
         # 查看所有网卡
@@ -68,34 +55,18 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
     def capture(self):
         while self.is_sniff:
             pkt = sniff(filter=self.filter, prn=self.handle_pkt, iface=self.dev, count=1)
-            # 保存 pkt
-            # self.saved_pkt.append(pkt[0])
-            # # print(pkt)
-            # # print(pkt[0])
 
     def handle_pkt(self, pkt):
-        # pkt.show()
-        # print(pkt.time)
-        # print(type(pkt.src))
-        # print(pkt.dst)
-        # print(pkt.load)
-
         # 保存 pkt
         self.saved_pkt.append(pkt)
+        self.display_pkt.append(pkt)
         number = self.tableWidget.rowCount()
         self.tableWidget.insertRow(number)
-
         self.tableWidget.setItem(number, 0, QTableWidgetItem(str(number + 1)))  # No.
-
         if number == 0:
             self.start_time = pkt.time
         capture_time = "%.6f" % (pkt.time - self.start_time)
-        # print(type(capture_time))
         self.tableWidget.setItem(number, 1, QTableWidgetItem(str(capture_time)))  # Time
-        # print(str(number + 1))
-        # print(pkt)
-
-        # print(str(type(len(pkt))) + str(len(pkt)))
         if pkt.haslayer("Loopback"):
             self.tableWidget.setItem(number, 2, QTableWidgetItem("127.0.0.1"))  # Source
             self.tableWidget.setItem(number, 3, QTableWidgetItem("127.0.0.1"))  # Destination
@@ -104,7 +75,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
             self.tableWidget.setItem(number, 6, QTableWidgetItem("Loopback"))  # Info
             return
         if pkt.haslayer("Ether"):
-            # print(pkt["Ether"].layers)
             if pkt.haslayer("ARP"):
                 self.tableWidget.setItem(number, 2, QTableWidgetItem(pkt["Ether"].src))  # Source
                 self.tableWidget.setItem(number, 3, QTableWidgetItem(pkt["Ether"].dst))  # Destination
@@ -127,8 +97,6 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                     return
                 if pkt.haslayer("UDP"):
                     if pkt["UDP"].dport == 1900:
-                        # print("enter")
-                        # print(pkt["Raw"].load.decode('utf-8').split('\r', 1)[0])
                         self.tableWidget.setItem(number, 4, QTableWidgetItem("SSDP"))  # Protocol
                         self.tableWidget.setItem(number, 6,
                                                  QTableWidgetItem(
@@ -158,18 +126,22 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 self.tableWidget.setItem(number, 5, QTableWidgetItem(str(len(pkt))))  # Length
                 if pkt["IPv6"].nh == 58 or pkt["IPv6"].nh == 0 and pkt["IPv6ExtHdrHopByHop"].nh == 58:
                     self.tableWidget.setItem(number, 4, QTableWidgetItem("ICMPv6"))  # Protocol
-                    if pkt.haslayer("ICMPv6ND_NS") and pkt.haslayer("ICMPv6NDOptSrcLLAddr"):
-                        a = pkt["ICMPv6ND_NS"].tgt
+                    b = ''
+                    if pkt.haslayer("ICMPv6NDOptSrcLLAddr"):
                         b = pkt["ICMPv6NDOptSrcLLAddr"].lladdr
-                        # print("enter")
-                        # print(pkt["ICMPv6ND_NS"].type)
+                    if pkt.haslayer("ICMPv6ND_NS"):
+                        a = pkt["ICMPv6ND_NS"].tgt
                         if pkt["ICMPv6ND_NS"].type == 135:  # ICMPv6ND_NS type=Neighbor Solicitation = 135
-                            self.tableWidget.setItem(number, 6, QTableWidgetItem("Neighbor Solicitation for " +
-                                                                                 str(a) + " from " + str(b)))
+                            if b != '':
+                                self.tableWidget.setItem(number, 6, QTableWidgetItem("Neighbor Solicitation for " +
+                                                                                     str(a) + " from " + str(b)))
+                                return
+                            self.tableWidget.setItem(number, 6, QTableWidgetItem("Neighbor Solicitation for " + str(a)))
                             return
                     if pkt.haslayer("ICMPv6MLReport"):
                         self.tableWidget.setItem(number, 6, QTableWidgetItem("Multicast Report"))
                         return
+                    return
                 if pkt.haslayer("UDP"):
                     if pkt.haslayer("DNS"):
                         if pkt["IPv6"].dst == "ff02::fb" and pkt["UDP"].dport == 5353 and pkt["UDP"].sport == 5353:
@@ -205,6 +177,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 self.tableWidget.setItem(number, 4, QTableWidgetItem("ieee1905"))  # Protocol
                 # self.tableWidget.setItem(number, 6, QTableWidgetItem(""))
                 return
+            self.tableWidget.setItem(number, 4, QTableWidgetItem("Ether"))
 
     def stop_sniff(self):
         self.is_sniff = False
@@ -231,12 +204,8 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         src_port = self.lineEdit_3.text()
         dst_port = self.lineEdit_4.text()
         # self.filter =
-        new_saved_pkt = []
+        self.display_pkt = []
 
-        # print("new: " + str(len(new_saved_pkt)))
-        # print("saved: " + str(len(self.saved_pkt)))
-        #
-        # print(proto + " " + src_ip + " " + dst_ip + " " + src_port + " " + dst_port)
         number = self.tableWidget.rowCount()
         for i in range(number):
             if proto != '':
@@ -286,7 +255,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
                 # print("d_port:" + str(d_port))
                 if str(d_port) != str(dst_port):
                     continue
-            new_saved_pkt.append(self.saved_pkt[i])
+            self.display_pkt.append(self.saved_pkt[i])
         # self.clear_data()
         number = self.tableWidget.rowCount()
         for i in range(number - 1, -1, -1):
@@ -294,15 +263,11 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         self.textEdit.clear()
         self.textEdit_2.clear()
         ll = len(self.saved_pkt)  # 保留原本的长度，在handle时会改变saved_pkt的长度
-        # print("new: " + str(len(new_saved_pkt)))
-        # print("saved: " + str(len(self.saved_pkt)))
-        for i in range(len(new_saved_pkt)):
-            self.handle_pkt(new_saved_pkt[i])
-        # print("new: " + str(len(new_saved_pkt)))
-        # print("saved: " + str(len(self.saved_pkt)))
+        lll = len(self.display_pkt)
+        for i in range(len(self.display_pkt)):
+            self.handle_pkt(self.display_pkt[i])
         self.saved_pkt = self.saved_pkt[0:ll]
-        # print("new: " + str(len(new_saved_pkt)))
-        # print("saved: " + str(len(self.saved_pkt)))
+        self.display_pkt = self.display_pkt[0:lll]
         if sniff_start:
             self.is_sniff = True
 
@@ -313,14 +278,14 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         self.textEdit.clear()
         self.textEdit_2.clear()
         ll = len(self.saved_pkt)  # 保留原本的长度，在handle时会改变saved_pkt的长度
+        lll = len(self.display_pkt)
         for i in range(len(self.saved_pkt)):
             self.handle_pkt(self.saved_pkt[i])
         self.saved_pkt = self.saved_pkt[0:ll]
+        self.display_pkt = self.display_pkt[0:lll]
 
     def save_data(self):
         file, file_type = QFileDialog.getSaveFileName(self, caption="选择保存路径", filter="*.pcap")
-        # print(file)
-        # print(file_type)
         if file == '':
             QMessageBox.warning(self, "注意", "文件内容不能为空")
             return
@@ -340,6 +305,7 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
     def clear_data(self):
         # self.stop_sniff()
         self.saved_pkt = []
+        self.display_pkt = []
         number = self.tableWidget.rowCount()
         for i in range(number - 1, -1, -1):
             self.tableWidget.removeRow(i)
@@ -350,20 +316,21 @@ class Sniff_Mainwindow(QMainWindow, Ui_MainWindow):
         self.textEdit.clear()
         self.textEdit_2.clear()
         number = index.row()
-        pkt = self.saved_pkt[number]
+        pkt = self.display_pkt[number]
 
-        tmp = "Frame number %d: \n interface: %s" % (number + 1, self.dev)
+        tmp = "包序号： %d: \n网卡名称: %s" % (number + 1, self.dev)
         self.textEdit.setText(tmp)
-        if hasattr(pkt, "len"):
-            self.textEdit.append(" length: %d bytes" % len(pkt))
-        self.textEdit.append(str(pkt))
+        self.textEdit.append("包长度: %d bytes" % len(pkt))
+        self.textEdit.append("包的层次： " + str(pkt))
+        # self.textEdit.append(str(pkt["Ether"].layers))
         if pkt.haslayer("Ether"):
-            self.textEdit.append(str(pkt["Ether"].layers))
+            self.textEdit.append("包的具体内容:")
+            output = StringIO()
+            sys.stdout = output
+            pkt.display()
+            self.textEdit.append(output.getvalue())
+            sys.stdout = sys.__stdout__
 
-        # self.textEdit_2.setText(str(bytes_hex(pkt)))
-        # hex_bytes = binascii.hexlify(pkt)
-        # print(bytes(pkt))
-        # print(bytes_hex(pkt))
         hex_data = ' '.join([f'{x:02X}' for x in bytes(pkt)])
         lines = [hex_data[i:i + 48] for i in range(0, len(hex_data), 48)]
         self.textEdit_2.setPlainText('\n'.join(lines))
